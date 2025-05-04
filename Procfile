@@ -1,1 +1,1 @@
-web: gunicorn perciosfacil.wsgi:application
+web: gunicorn perciosfacil.wsgi
