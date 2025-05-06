@@ -3,9 +3,381 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>PrecioFácil 🏷️ | Comparador de Precios Online - Encuentra los Mejores Precios</title>
+    <meta name="description" content="Compara precios en tiempo real entre miles de tiendas online con PrecioFácil. Ahorra hasta un 40% encontrando las mejores ofertas y promociones en electrónica, hogar y moda.">
+    <meta name="keywords" content="comparador de precios, ofertas online, ahorrar en compras, comparar productos, mejor precio, promociones, descuentos, compras online">
+    <style>
+        /* Estilos generales */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        body {
+            background-color: #f9fafb;
+            color: #111827;
+        }
+        
+        /* Estilos del navbar */
+        .navbar {
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .navbar-container {
+            padding: 0.75rem 0;
+        }
+        
+        .navbar-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        /* Logo y título */
+        .brand {
+            display: flex;
+            align-items: center;
+            color: #111827;
+            text-decoration: none;
+            margin-right: 0.5rem;
+        }
+        
+        .brand-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            margin-right: 0.5rem;
+            color: #4f46e5;
+        }
+        
+        .brand-name {
+            font-weight: 700;
+            font-size: 1.25rem;
+            white-space: nowrap;
+        }
+        
+        /* Formulario de búsqueda */
+        .search-form {
+            display: flex;
+            flex: 1;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+        
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        /* Corregido: Posicionamiento del icono de búsqueda */
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1rem;
+            height: 1rem;
+            pointer-events: none; /* Asegura que el icono no interfiera con el input */
+            z-index: 1; /* Asegura que el icono esté por encima del input */
+        }
+        
+        .search-input {
+            width: 100%;
+            height: 2.5rem;
+            padding: 0 0.75rem 0 2.25rem; /* Espacio a la izquierda para el icono */
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            background-color: white;
+            color: #111827;
+            transition: all 0.2s;
+            position: relative; /* Asegura el correcto posicionamiento */
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+        
+        /* Dropdown de marketplaces */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-button {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            height: 2.5rem;
+            padding: 0 0.75rem;
+            background-color: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #111827;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .dropdown-button:hover {
+            background-color: #f9fafb;
+        }
+        
+        .dropdown-icon {
+            width: 0.875rem;
+            height: 0.875rem;
+            margin-left: 0.25rem;
+            transition: transform 0.2s;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            margin-top: 0.25rem;
+            min-width: 12rem;
+            background-color: white;
+            border-radius: 0.375rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+            padding: 0.5rem;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        
+        .dropdown:hover .dropdown-icon {
+            transform: rotate(180deg);
+        }
+        
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .dropdown-checkbox {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1rem;
+            height: 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            background-color: white;
+        }
+        
+        .dropdown-item.selected .dropdown-checkbox {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+        
+        .dropdown-item.selected .dropdown-checkbox::after {
+            content: "";
+            width: 0.375rem;
+            height: 0.375rem;
+            background-color: white;
+            border-radius: 50%;
+        }
+        
+        /* Botón de comparar */
+        .compare-button {
+            height: 2.5rem;
+            padding: 0 1rem;
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+        
+        .compare-button:hover {
+            background-color: #4338ca;
+        }
+        
+        /* Etiquetas de marketplaces */
+        .marketplace-tags {
+            display: none;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+        }
+        
+        .marketplace-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            background-color: #f3f4f6;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            color: #4b5563;
+            white-space: nowrap;
+        }
+        
+        /* SVG Icons - Corregidos para mejor visualización */
+        .icon-cart {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='21' r='1'%3E%3C/circle%3E%3Ccircle cx='20' cy='21' r='1'%3E%3C/circle%3E%3Cpath d='M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6'%3E%3C/path%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        
+        .icon-search {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        
+        .icon-chevron {
+            display: inline-block;
+            width: 0.875rem;
+            height: 0.875rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        
+        /* Contenido principal */
+        .main-content {
+            padding: 2rem 0;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+        
+        .card-text {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+        }
+        
+        .placeholder {
+            padding: 1.5rem;
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            text-align: center;
+            color: #6b7280;
+        }
+        
+        /* Responsive */
+        @media (min-width: 768px) {
+            .navbar-container {
+                padding: 1rem 0;
+            }
+            
+            .marketplace-tags {
+                display: flex;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Funciona!!!</h1>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <div class="navbar-content">
+                <!-- Logo y nombre -->
+                <a href="#" class="brand">
+                    <span class="icon-cart"></span>
+                    <span class="brand-name">PrecioFácil</span>
+                </a>
+                
+                <!-- Formulario de búsqueda -->
+                <form class="search-form" method="post">
+                    <div class="search-wrapper">
+                        <div class="icon-search search-icon"></div>
+                        <input type="text" name="search_item" class="search-input" placeholder="Buscar productos...">
+                    </div>
+                    
+                    <!-- Dropdown de marketplaces -->
+                    <div class="dropdown">
+                        <button type="button" class="dropdown-button">
+                            Marketplaces
+                            <span class="icon-chevron"></span>
+                        </button>
+                        <div class="dropdown-content">
+                            <div class="dropdown-item selected">
+                                <span class="dropdown-checkbox"></span>
+                                <span>Mercado Libre</span>
+                            </div>
+                            <div class="dropdown-item selected">
+                                <span class="dropdown-checkbox"></span>
+                                <span>Falabella</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="compare-button">Comparar</button>
+                </form>
+                
+                <!-- Etiquetas de marketplaces -->
+                <div class="marketplace-tags">
+                    <div class="marketplace-tag">Mercado Libre</div>
+                    <div class="marketplace-tag">Falabella</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Contenido principal -->
+    <main class="container main-content">
+        <div class="card">
+            <h1 class="card-title">Comparador de Precios</h1>
+            <p class="card-text">
+                Busca productos y compara precios en diferentes marketplaces como Amazon, eBay, Walmart, AliExpress y más.
+            </p>
+            
+            <div class="placeholder">
+                <p>Utiliza la barra de búsqueda en la parte superior para encontrar y comparar precios de productos.</p>
+            </div>
+        </div>
+    </main>
 </body>
 </html>
