@@ -331,6 +331,7 @@
                 
                 <!-- Formulario de búsqueda -->
                 <form class="search-form" method="post">
+                    {% csrf_token %}
                     <div class="search-wrapper">
                         <div class="icon-search search-icon"></div>
                         <input type="text" name="search_item" class="search-input" placeholder="Buscar productos...">
