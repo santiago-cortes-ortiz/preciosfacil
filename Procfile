@@ -1,1 +1,1 @@
-web: python manage.py && gunicorn perciosfacil.wsgi
+web: gunicorn perciosfacil.wsgi
