@@ -19,6 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('', include('home.urls')),  # Root URL will now go to home
-    path('admin/', admin.site.urls),
+    # path('admin/', admin.site.urls),
     path('home/', include('home.urls')),
 ]
