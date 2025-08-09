@@ -82,8 +82,7 @@ WSGI_APPLICATION = 'perciosfacil.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.dummy',
     }
 }
 
@@ -129,24 +128,10 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Logging a consola para depurar scraping
+# Logging deshabilitado por completo
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        '': {  # root logger
-            'handlers': ['console'],
-            'level': 'INFO',
-        },
-        'home': {  # app específica
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-    },
+    'disable_existing_loggers': True,
+    'handlers': {},
+    'loggers': {},
 }

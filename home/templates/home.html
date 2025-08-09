@@ -344,16 +344,13 @@
                             <span class="icon-chevron"></span>
                         </button>
                         <div class="dropdown-content">
-                            <label class="dropdown-item {% if 'mercadolibre' in selected_sources %}selected{% endif %}">
-                                <input style="display:none" type="checkbox" name="sources" value="mercadolibre" {% if not selected_sources or 'mercadolibre' in selected_sources %}checked{% endif %}>
+                            {% for s in available_sources %}
+                            <label class="dropdown-item {% if not selected_sources or s.key in selected_sources %}selected{% endif %}">
+                                <input style="display:none" type="checkbox" name="sources" value="{{ s.key }}" {% if not selected_sources or s.key in selected_sources %}checked{% endif %}>
                                 <span class="dropdown-checkbox"></span>
-                                <span>Mercado Libre</span>
+                                <span>{{ s.label }}</span>
                             </label>
-                            <label class="dropdown-item {% if 'falabella' in selected_sources %}selected{% endif %}">
-                                <input style="display:none" type="checkbox" name="sources" value="falabella" {% if 'falabella' in selected_sources %}checked{% endif %}>
-                                <span class="dropdown-checkbox"></span>
-                                <span>Falabella</span>
-                            </label>
+                            {% endfor %}
                         </div>
                     </div>
                     
@@ -362,12 +359,11 @@
                 
                 <!-- Etiquetas de marketplaces -->
                 <div class="marketplace-tags">
-                    {% if not selected_sources or 'mercadolibre' in selected_sources %}
-                    <div class="marketplace-tag">Mercado Libre</div>
-                    {% endif %}
-                    {% if 'falabella' in selected_sources %}
-                    <div class="marketplace-tag">Falabella</div>
-                    {% endif %}
+                    {% for s in available_sources %}
+                        {% if not selected_sources or s.key in selected_sources %}
+                        <div class="marketplace-tag">{{ s.label }}</div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -399,6 +395,24 @@
                             {% endfor %}
                         </ul>
                     </div>
+                {% endif %}
+
+                {% if best_item %}
+                <div class="card" style="margin-top:1rem;border:2px solid #10b981">
+                    <div style="font-weight:700;color:#065f46;margin-bottom:0.5rem;">Mejor precio</div>
+                    <a href="{{ best_item.link }}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
+                        <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+                            {% if best_item.thumbnail %}
+                            <img src="{{ best_item.thumbnail }}" alt="{{ best_item.title }}" style="width:80px;height:80px;object-fit:cover;border-radius:0.375rem;flex:0 0 auto;" />
+                            {% endif %}
+                            <div style="display:flex;flex-direction:column;gap:0.25rem;">
+                                <div style="font-weight:600;">{{ best_item.title }}</div>
+                                <div style="color:#111827;font-weight:700;">{{ best_item.price_str }}</div>
+                                <div style="font-size:0.75rem;color:#6b7280;">{{ best_item.source|default:'-' }}</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
                 {% endif %}
 
                 {% if results %}
