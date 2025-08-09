@@ -29,11 +29,27 @@ SECRET_KEY = getenv('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'preciosfacil-production.up.railway.app',
+    'preciosfacil.com',
+    'www.preciosfacil.com',
+    'localhost',
+    '127.0.0.1',
+    # Agrega aquí otros dominios específicos si los necesitas
+]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://preciosfacil-production.up.railway.app'
+    'https://preciosfacil-production.up.railway.app',
+    'https://preciosfacil.com',
 ]
+
+# Configuraciones de seguridad HTTP - ESENCIALES para producción
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 86400
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 
 # Application definition
 
