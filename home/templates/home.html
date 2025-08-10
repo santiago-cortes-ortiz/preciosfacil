@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrecioFácil 🏷️ | Comparador de Precios Online - Encuentra los Mejores Precios</title>
     <meta name="description" content="Compara precios en tiempo real entre miles de tiendas online con PrecioFácil. Ahorra hasta un 40% encontrando las mejores ofertas y promociones en electrónica, hogar y moda.">
-    <meta name="keywords" content="comparador de precios, ofertas online, ahorrar en compras, comparar productos, mejor precio, promociones, descuentos, compras online">
     <style>
         /* Estilos generales */
         * {
@@ -106,7 +105,6 @@
             background-color: white;
             color: #111827;
             transition: all 0.2s;
-            position: relative; /* Asegura el correcto posicionamiento */
         }
         
         .search-input:focus {
@@ -394,7 +392,7 @@
         <div class="container navbar-container">
             <div class="navbar-content">
                 <!-- Logo y nombre -->
-                <a href="#" class="brand">
+                <a href="/" class="brand">
                     <span class="icon-cart"></span>
                     <span class="brand-name">PrecioFácil</span>
                 </a>
@@ -522,9 +520,7 @@
     </div>
     
     <script>
-        const url = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, url);
-        localStorage.removeItem('search_item');
+        
         
         // Funcionalidad de loading
         const form = document.querySelector('.search-form');
@@ -617,17 +613,7 @@
             }
         });
         
-        // Detectar si la página se está cargando con resultados
-        const hasSearchResults = {{ search_query|yesno:"true,false" }};
-        const isPageLoad = !document.referrer || document.referrer === window.location.href;
         
-        // Solo ocultar loading si realmente había loading activo
-        window.addEventListener('DOMContentLoaded', function() {
-            // Si hay resultados y venimos de una búsqueda, ocultar loading
-            if (hasSearchResults && isLoading) {
-                hideLoading();
-            }
-        });
         
         // Manejar navegación del browser
         window.addEventListener('pageshow', function(event) {
