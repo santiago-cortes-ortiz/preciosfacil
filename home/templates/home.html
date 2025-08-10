@@ -520,7 +520,10 @@
     </div>
     
     <script>
-        
+        const url = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, url);
+        localStorage.removeItem('search_item');
+        sessionStorage.removeItem('search_item');
         
         // Funcionalidad de loading
         const form = document.querySelector('.search-form');
@@ -625,6 +628,14 @@
                 compareBtn.disabled = false;
                 btnSpinner.style.display = 'none';
                 btnText.textContent = 'Comparar';
+            }
+        });
+
+        // Manejar refresh (F5, Ctrl+R)
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'F5' || (event.ctrlKey && event.key === 'r')) {
+                event.preventDefault();
+                window.location.replace(window.location.pathname);
             }
         });
     </script>
