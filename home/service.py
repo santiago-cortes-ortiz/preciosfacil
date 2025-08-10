@@ -50,19 +50,16 @@ def process_search_mercadolibre(search_query: str, max_retries: int = 3, max_ite
 
     # Delay aleatorio para simular comportamiento humano
     delay = random.uniform(2.0, 5.0)  # Entre 2 y 5 segundos
-    logger.info(f"ML: esperando {delay:.1f}s antes de buscar...")
     time.sleep(delay)
 
     base_url = "https://listado.mercadolibre.com.co"
     formatted_query = slugify_query(search_query)
     full_url = f"{base_url}/{formatted_query}"
-    logger.info("ML: buscando term='%s' url='%s'", search_query, full_url)
 
     session = create_http_session(max_retries=max_retries)
 
     headers = get_realistic_headers()
     session.headers.update(headers)
-    logger.debug("ML: headers UA='%s' Referer='%s'", headers.get('User-Agent'), headers.get('Referer'))
     warm_up_ml_session(session)
 
     # Sin uso de API: nos quedamos solo con HTML
@@ -73,9 +70,7 @@ def process_search_mercadolibre(search_query: str, max_retries: int = 3, max_ite
 
     # 2) Eliminado fallback ?q=: usamos únicamente slug por consistencia
 
-    logger.info("ML HTML: resultados=%d", len(results_html))
     combined = deduplicate_items(results_html, max_items)
-    logger.info("ML combinado: total=%d", len(combined))
 
     return {
         "results": combined,
@@ -92,12 +87,10 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
 
     # Delay aleatorio más largo para Falabella (es más estricto)
     delay = random.uniform(3.0, 7.0)  # Entre 3 y 7 segundos
-    logger.info(f"FB: esperando {delay:.1f}s antes de buscar...")
     time.sleep(delay)
 
     base_url = "https://www.falabella.com.co/falabella-co/"
     full_url = f"{base_url}search?Ntt={quote_plus(search_query)}"
-    logger.info("Falabella: buscando term='%s' url='%s'", search_query, full_url)
 
     session = create_http_session(max_retries=max_retries)
     headers = get_realistic_headers()
@@ -112,13 +105,7 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
 
     try:
         response = session.get(full_url, timeout=15)
-        logger.info(
-            "FB HTTP: status=%s url=%s ctype=%s",
-            getattr(response, "status_code", "-"),
-            getattr(response, "url", full_url),
-            (response.headers or {}).get("Content-Type"),
-        )
-        logger.debug("FB HTTP: html_len=%d", len(response.text or ""))
+
         response.raise_for_status()
     except Exception as exc:
         logger.exception("Falabella: error al solicitar la página")
@@ -132,16 +119,13 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
         }
 
     cencoding = (response.headers or {}).get("Content-Encoding", "")
-    logger.info("FB HTTP: content-encoding=%s", cencoding)
     html = ""
     try:
         if "br" in cencoding.lower():
             try:
                 import brotli  # type: ignore
                 html = brotli.decompress(response.content).decode("utf-8", "replace")
-                logger.debug("FB decode: used brotli library")
             except Exception:
-                logger.warning("FB decode: brotli not available, falling back to response.text")
                 # requests no decodifica br por defecto
                 response.encoding = response.encoding or "utf-8"
                 html = response.text or ""
@@ -150,7 +134,6 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
             response.encoding = response.encoding or response.apparent_encoding or "utf-8"
             html = response.text or ""
     except Exception:
-        logger.debug("FB decode: error using response.text, fallback to bytes decode", exc_info=True)
         try:
             html = (response.content or b"").decode("utf-8", "replace")
         except Exception:
@@ -158,19 +141,17 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
     # Señales de anti-bot / captcha
     text_lower = html.lower()
     if any(k in text_lower for k in ["captcha", "no eres un robot", "robot check", "access denied", "awswaf"]):
-        logger.warning("FB Anti-bot: posible bloqueo/captcha detectado")
-    log_fb_markers(html)
+        pass  # Posible bloqueo detectado
+
     # Construcción de soup con fallbacks de parser
     try:
         soup = BeautifulSoup(html, "html.parser")
     except Exception:
         try:
             soup = BeautifulSoup(html, "lxml")  # type: ignore
-            logger.debug("FB soup: using lxml parser")
         except Exception:
             try:
                 soup = BeautifulSoup(html, "html5lib")  # type: ignore
-                logger.debug("FB soup: using html5lib parser")
             except Exception as exc2:
                 logger.exception("FB soup: all parsers failed")
                 return {
@@ -183,19 +164,14 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
                 }
 
     items_cards = parse_falabella_cards(soup, max_items=max_items)
-    logger.info("FB parse cards: items=%d", len(items_cards))
     if not items_cards:
         items_cards = parse_next_data_products(soup, max_items=max_items)
-        logger.info("FB next-data: items=%d", len(items_cards))
     if not items_cards:
         items_cards = parse_json_ld(soup, max_items=max_items)
-        logger.info("FB json-ld: items=%d", len(items_cards))
     if not items_cards:
         items_cards = parse_generic_by_regex_domain(soup, domain_substring="falabella.com.co", max_items=max_items)
-        logger.info("FB regex domain: items=%d", len(items_cards))
 
     items_dedup = deduplicate_items(items_cards, max_items)
-    logger.info("FB final: unique_items=%d", len(items_dedup))
 
     return {
         "results": items_dedup,
@@ -213,19 +189,16 @@ def parse_falabella_cards(soup: BeautifulSoup, max_items: int = 20) -> list[dict
     anchors = soup.select(
         "a.pod-link, a.pod-product__title, a.grid-pod__title, a.falabella-product-link, a[href*='/falabella-co/product/'], a[href*='/product/']"
     )
-    logger.debug("FB sel: anchors=%d", len(anchors))
 
     # Si no hay anclas, intentar seleccionar contenedores de tarjetas y obtener el <a> interno
     if not anchors:
         product_cards = soup.select(
             "[data-pod], div[data-pod='product-pod'], li[data-pod], div.pod, li.pod, [data-testid='searchResults-product']"
         )
-        logger.debug("FB sel: product_cards=%d (anchors vacíos)", len(product_cards))
         for card in product_cards:
             a = card.select_one("a[href*='/product/'], a.falabella-product-link, a")
             if a:
                 anchors.append(a)
-        logger.debug("FB sel: anchors_from_cards=%d", len(anchors))
 
     seen_links: set[str] = set()
 
@@ -405,15 +378,7 @@ def parse_falabella_cards(soup: BeautifulSoup, max_items: int = 20) -> list[dict
                         "thumbnail": thumbnail,
                     }
                 )
-                if sample_logged < 5:
-                    logger.debug(
-                        "FB item: title='%s' price=%s method=%s link=%s",
-                        (title[:80] + ("…" if len(title) > 80 else "")),
-                        price_cop,
-                        price_method,
-                        href,
-                    )
-                    sample_logged += 1
+                sample_logged += 1
             if len(items) >= max_items:
                 break
         except Exception:
@@ -437,15 +402,7 @@ def parse_falabella_cards(soup: BeautifulSoup, max_items: int = 20) -> list[dict
         except Exception:
             pass
 
-    logger.info(
-        "FB parse: built=%d discards: dup=%d no_title_or_link=%d no_price_estimated=%d derived_links=%d anchors=%d",
-        len(items),
-        discards_duplicate,
-        discards_no_title_or_link,
-        discards_no_price,
-        derived_link_count,
-        len(anchors),
-    )
+
 
     return items
 
@@ -540,14 +497,11 @@ def parse_next_data_products(soup: BeautifulSoup, max_items: int = 20) -> list[d
 
                 if len(results) >= max_items:
                     break
-            logger.debug(
-                "FB next-data scan: added=%d (total=%d)",
-                len(results) - count_before, len(results)
-            )
+
             if len(results) >= max_items:
                 break
     except Exception:
-        logger.debug('FB next-data parse error', exc_info=True)
+        pass
     return results
 
 
@@ -599,15 +553,13 @@ def warm_up_ml_session(session: requests.Session) -> None:
     try:
         base = "https://www.mercadolibre.com.co/"
         r1 = session.get(base, timeout=10)
-        logger.debug("Warm-up 1: %s %s", r1.status_code, base)
         # Delay más realista entre páginas
         delay = random.uniform(1.0, 3.0)
         time.sleep(delay)
         offers = "https://www.mercadolibre.com.co/ofertas"
         r2 = session.get(offers, timeout=10)
-        logger.debug("Warm-up 2: %s %s", r2.status_code, offers)
     except Exception:
-        logger.debug("Warm-up: ignorado por excepción", exc_info=True)
+        pass
 
 
 def slugify_query(query: str) -> str:
@@ -622,7 +574,6 @@ def slugify_query(query: str) -> str:
 def basic_ml_scraper(search_slug: str, max_items: int = 5) -> dict:
     url = f"https://listado.mercadolibre.com.co/{search_slug}"
     headers = {"User-Agent": "Mozilla/5.0 (compatible; Scraper/1.0)"}
-    logger.info("BASIC ML: url='%s'", url)
     try:
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
@@ -632,13 +583,10 @@ def basic_ml_scraper(search_slug: str, max_items: int = 5) -> dict:
 
     html = response.text or ""
     preview = html[:1000]
-    print(preview)
     soup = BeautifulSoup(html, 'html.parser')
 
     anchors = _select_basic_title_anchors(soup)
     items = _collect_items_from_anchors(anchors, max_items)
-
-    logger.info("BASIC ML: items=%d", len(items))
     return {"results": items, "url": url, "preview": preview}
 
 
@@ -734,7 +682,6 @@ def parse_mercadolibre_results(soup: BeautifulSoup, max_items: int = 20):
     # Detección simple de anti-bot/captcha
     page_text = soup.get_text(" ", strip=True).lower()
     if any(keyword in page_text for keyword in ["no eres un robot", "verifica que no eres", "captcha", "robot check"]):
-        logger.warning("ML HTML: posible captcha / anti-bot detectado")
         return []
 
     # Selección robusta de items (prioriza layout poly dentro de li.ui-search-layout__item)
@@ -750,10 +697,7 @@ def parse_mercadolibre_results(soup: BeautifulSoup, max_items: int = 20):
     candidates.extend(sel_poly_divs)
     candidates.extend(sel_li_items)
 
-    logger.info(
-        "ML selectores: poly_in_li=%d ui_results=%d poly_divs=%d li_items=%d total_candidates=%d",
-        len(sel_poly_in_li), len(sel_ui_results), len(sel_poly_divs), len(sel_li_items), len(candidates)
-    )
+
 
     for node in candidates:
         # Link
@@ -819,21 +763,17 @@ def parse_mercadolibre_results(soup: BeautifulSoup, max_items: int = 20):
                 }
             )
         else:
-            logger.debug(
-                "ML item descartado: have_title=%s have_link=%s have_price=%s",
-                bool(title), bool(link), price_cop is not None,
-            )
+            pass
 
         if len(items) >= max_items:
             break
 
-    logger.info("ML parse: items_validos=%d", len(items))
+
     if items:
         return items
 
     # Fallback: buscar por anclas de título y reconstruir contenedor
     anchors = soup.select('a.poly-component__title')
-    logger.info("ML fallback anchors poly-component__title=%d", len(anchors))
     for a in anchors:
         try:
             link = a.get('href')
@@ -883,53 +823,26 @@ def parse_mercadolibre_results(soup: BeautifulSoup, max_items: int = 20):
             if len(items) >= max_items:
                 break
         except Exception:
-            logger.debug('ML fallback anchor parse error', exc_info=True)
+            pass
 
-    logger.info("ML fallback parse: items_validos=%d", len(items))
+
     if items:
         return items
 
     # Fallback JSON-LD
     items = parse_json_ld(soup, max_items=max_items)
-    logger.info("ML json-ld parse: items_validos=%d", len(items))
     if items:
         return items
 
     # Fallback genérico: buscar anchors a dominios de ML y extraer precios cercanos por regex
     items = parse_generic_by_regex(soup, max_items=max_items)
-    logger.info("ML regex parse: items_validos=%d", len(items))
     return items
 
 
-def log_marker_counts(html_text: str) -> None:
-    markers = [
-        'poly-card', 'poly-component__title', 'ui-search-layout__item',
-        'andes-money-amount__fraction', 'ui-search-result', 'poly-price__current'
-    ]
-    counts = {m: html_text.count(m) for m in markers}
-    logger.info("ML markers: %s", counts)
 
 
-def log_fb_markers(html_text: str) -> None:
-    markers = [
-        'data-event-price',
-        'data-internet-price',
-        'data-cmr-price',
-        'data-normal-price',
-        'pod-title',
-        'pod-subTitle',
-        'pod-link',
-        'falabella-product-link',
-        'pod-product__title',
-        'grid-pod__title',
-        'data-testid="searchResults-product"',
-        '/falabella-co/product/',
-        '/product/',
-        'captcha',
-        'awswaf',
-    ]
-    counts = {m: html_text.count(m) for m in markers}
-    logger.info("FB markers: %s", counts)
+
+
 
 
 def parse_generic_by_regex(soup: BeautifulSoup, max_items: int = 20) -> list[dict]:
@@ -1087,7 +1000,7 @@ def parse_json_ld(soup: BeautifulSoup, max_items: int = 20) -> list[dict]:
             if len(results) >= max_items:
                 break
     except Exception:
-        logger.debug('ML json-ld parse error', exc_info=True)
+        pass
     return results
 
 
@@ -1125,11 +1038,10 @@ def fallback_ml_api(search_query: str, limit: int = 20) -> list[dict]:
                     'price_str': format_price_cop(price_int),
                     'thumbnail': thumb,
                 })
-        logger.debug("ML API parseados=%d de total=%d", len(items), len(data.get('results', [])))
         return items
     except Exception:
-        logger.exception("ML API: fallo al consultar")
-        return []
+        pass
+    return []
 
 def deduplicate_items(items: list[dict], max_items: int) -> list[dict]:
     seen: set[str] = set()
@@ -1158,7 +1070,7 @@ def search_aggregated(search_query: str, sources: list[str] | None = None, max_i
     aggregated_items: list[dict] = []
     errors: list[str] = []
 
-    logger.info("Agregador: term='%s' sources=%s", search_query, ",".join(sources))
+
     for source in sources:
         entry = SCRAPERS.get(source)
         if not entry:
@@ -1174,11 +1086,9 @@ def search_aggregated(search_query: str, sources: list[str] | None = None, max_i
             if data.get("error"):
                 errors.append(f"{entry.get('label', source)}: {data['error']}")
         except Exception as exc:
-            logger.exception("Scraper '%s' falló", source)
             errors.append(f"{entry.get('label', source)}: {exc}")
 
     aggregated_items.sort(key=lambda x: x.get("price_cop", 0))
-    logger.info("Agregador: total_items=%d errors=%d", len(aggregated_items), len(errors))
 
     best_item = aggregated_items[0] if aggregated_items else None
 

@@ -160,10 +160,32 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Logging deshabilitado por completo
+# Logging configurado solo para excepciones
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
-    'handlers': {},
-    'loggers': {},
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'level': 'ERROR',
+        },
+    },
+    'loggers': {
+        'home.service': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'level': 'CRITICAL',
+        'handlers': [],
+    },
 }
