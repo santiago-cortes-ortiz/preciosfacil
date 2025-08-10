@@ -9,6 +9,7 @@ import logging
 import time
 import json
 from typing import List, Dict, Optional
+import concurrent.futures
 
 logger = logging.getLogger(__name__)
 
@@ -47,31 +48,18 @@ def get_available_sources() -> list[dict]:
 def process_search_mercadolibre(search_query: str, max_retries: int = 3, max_items: int = 20):
     if not search_query:
         return {"results": []}
-
-    # Delay aleatorio para simular comportamiento humano
-    delay = random.uniform(2.0, 5.0)  # Entre 2 y 5 segundos
+    delay = random.uniform(1.5, 4.0)  # Entre 2 y 5 segundos
     time.sleep(delay)
-
     base_url = "https://listado.mercadolibre.com.co"
     formatted_query = slugify_query(search_query)
     full_url = f"{base_url}/{formatted_query}"
-
     session = create_http_session(max_retries=max_retries)
-
     headers = get_realistic_headers()
     session.headers.update(headers)
     warm_up_ml_session(session)
-
-    # Sin uso de API: nos quedamos solo con HTML
-
-    # 1) Scraper básico con headers mínimos (UA genérico) y vista previa de HTML
     basic = basic_ml_scraper(formatted_query, max_items=max_items)
     results_html = basic.get('results', [])
-
-    # 2) Eliminado fallback ?q=: usamos únicamente slug por consistencia
-
     combined = deduplicate_items(results_html, max_items)
-
     return {
         "results": combined,
         "source": "mercadolibre",
@@ -85,8 +73,7 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
     if not search_query:
         return {"results": []}
 
-    # Delay aleatorio más largo para Falabella (es más estricto)
-    delay = random.uniform(3.0, 7.0)  # Entre 3 y 7 segundos
+    delay = random.uniform(2.0, 5.0) 
     time.sleep(delay)
 
     base_url = "https://www.falabella.com.co/falabella-co/"
@@ -94,18 +81,14 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
 
     session = create_http_session(max_retries=max_retries)
     headers = get_realistic_headers()
-    # Ajustes menores de headers
     headers.update({
         "Referer": "https://www.falabella.com.co/",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     })
     session.headers.update(headers)
-    # Evitar brotli para simplificar la decodificación si el entorno no lo soporta
     session.headers["Accept-Encoding"] = "gzip, deflate"
-
     try:
         response = session.get(full_url, timeout=15)
-
         response.raise_for_status()
     except Exception as exc:
         logger.exception("Falabella: error al solicitar la página")
@@ -117,7 +100,6 @@ def process_search_falabella(search_query: str, max_retries: int = 3, max_items:
             "query": search_query,
             "url": full_url,
         }
-
     cencoding = (response.headers or {}).get("Content-Encoding", "")
     html = ""
     try:
@@ -1070,23 +1052,32 @@ def search_aggregated(search_query: str, sources: list[str] | None = None, max_i
     aggregated_items: list[dict] = []
     errors: list[str] = []
 
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(sources) or 2) as executor:
+        # Mapear futuros a la fuente para poder identificar los resultados
+        future_to_source = {
+            executor.submit(
+                SCRAPERS[source]["function"], search_query, max_items=max_items_per_source
+            ): source
+            for source in sources if source in SCRAPERS
+        }
 
-    for source in sources:
-        entry = SCRAPERS.get(source)
-        if not entry:
-            errors.append(f"Fuente no soportada: {source}")
-            continue
-        try:
-            data = entry["function"](search_query, max_items=max_items_per_source)
-            if data.get("results"):
-                for item in data["results"]:
-                    # Etiquetar con el nombre amigable de la fuente
-                    item["source"] = entry.get("label", source)
-                aggregated_items.extend(data["results"])
-            if data.get("error"):
-                errors.append(f"{entry.get('label', source)}: {data['error']}")
-        except Exception as exc:
-            errors.append(f"{entry.get('label', source)}: {exc}")
+        for future in concurrent.futures.as_completed(future_to_source):
+            source = future_to_source[future]
+            entry = SCRAPERS.get(source)
+            if not entry:
+                continue
+            
+            try:
+                data = future.result()
+                if data.get("results"):
+                    for item in data["results"]:
+                        # Etiquetar con el nombre amigable de la fuente
+                        item["source"] = entry.get("label", source)
+                    aggregated_items.extend(data["results"])
+                if data.get("error"):
+                    errors.append(f"{entry.get('label', source)}: {data['error']}")
+            except Exception as exc:
+                errors.append(f"{entry.get('label', source)}: {exc}")
 
     aggregated_items.sort(key=lambda x: x.get("price_cop", 0))
 
@@ -1099,8 +1090,6 @@ def search_aggregated(search_query: str, sources: list[str] | None = None, max_i
         "sources": sources,
         "best_item": best_item,
     }
-
-# Compatibilidad hacia atrás
 
 def process_search(search_query: str, max_retries: int = 3, max_items: int = 20):
     return process_search_mercadolibre(search_query, max_retries=max_retries, max_items=max_items)
