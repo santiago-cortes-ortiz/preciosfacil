@@ -64,6 +64,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'perciosfacil.middleware.GlobalRateLimitMiddleware',  # Rate limiting global
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -101,6 +102,21 @@ DATABASES = {
         'ENGINE': 'django.db.backends.dummy',
     }
 }
+
+# Configuración de cache para django-ratelimit
+# Usando cache en memoria local (simple para desarrollo/producción básica)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'ratelimit-cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Configuración de django-ratelimit
+RATELIMIT_USE_CACHE = 'default'
 
 
 # Password validation
