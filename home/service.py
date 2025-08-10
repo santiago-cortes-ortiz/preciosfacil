@@ -48,6 +48,11 @@ def process_search_mercadolibre(search_query: str, max_retries: int = 3, max_ite
     if not search_query:
         return {"results": []}
 
+    # Delay aleatorio para simular comportamiento humano
+    delay = random.uniform(2.0, 5.0)  # Entre 2 y 5 segundos
+    logger.info(f"ML: esperando {delay:.1f}s antes de buscar...")
+    time.sleep(delay)
+
     base_url = "https://listado.mercadolibre.com.co"
     formatted_query = slugify_query(search_query)
     full_url = f"{base_url}/{formatted_query}"
@@ -84,6 +89,11 @@ def process_search_mercadolibre(search_query: str, max_retries: int = 3, max_ite
 def process_search_falabella(search_query: str, max_retries: int = 3, max_items: int = 5):
     if not search_query:
         return {"results": []}
+
+    # Delay aleatorio más largo para Falabella (es más estricto)
+    delay = random.uniform(3.0, 7.0)  # Entre 3 y 7 segundos
+    logger.info(f"FB: esperando {delay:.1f}s antes de buscar...")
+    time.sleep(delay)
 
     base_url = "https://www.falabella.com.co/falabella-co/"
     full_url = f"{base_url}search?Ntt={quote_plus(search_query)}"
@@ -590,7 +600,9 @@ def warm_up_ml_session(session: requests.Session) -> None:
         base = "https://www.mercadolibre.com.co/"
         r1 = session.get(base, timeout=10)
         logger.debug("Warm-up 1: %s %s", r1.status_code, base)
-        time.sleep(random.uniform(0.2, 0.6))
+        # Delay más realista entre páginas
+        delay = random.uniform(1.0, 3.0)
+        time.sleep(delay)
         offers = "https://www.mercadolibre.com.co/ofertas"
         r2 = session.get(offers, timeout=10)
         logger.debug("Warm-up 2: %s %s", r2.status_code, offers)
