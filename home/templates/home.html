@@ -220,12 +220,82 @@
             font-size: 0.875rem;
             font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
         }
         
-        .compare-button:hover {
+        .compare-button:hover:not(:disabled) {
             background-color: #4338ca;
+        }
+        
+        .compare-button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        /* Spinner de carga */
+        .spinner {
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Overlay de carga */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .loading-card {
+            background-color: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            text-align: center;
+            max-width: 20rem;
+            margin: 0 1rem;
+        }
+        
+        .loading-spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        .loading-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        
+        .loading-text {
+            color: #6b7280;
+            font-size: 0.875rem;
         }
         
         /* Etiquetas de marketplaces */
@@ -354,7 +424,10 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="compare-button">Comparar</button>
+                    <button type="submit" class="compare-button" id="compareBtn">
+                        <span class="spinner" id="btnSpinner" style="display: none;"></span>
+                        <span id="btnText">Comparar</span>
+                    </button>
                 </form>
                 
                 <!-- Etiquetas de marketplaces -->
@@ -438,10 +511,136 @@
             {% endif %}
         </div>
     </main>
+    
+    <!-- Overlay de carga -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-card">
+            <div class="loading-spinner"></div>
+            <div class="loading-title">Buscando precios...</div>
+            <div class="loading-text">Comparando en diferentes marketplaces para encontrar las mejores ofertas</div>
+        </div>
+    </div>
+    
     <script>
         const url = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, url);
         localStorage.removeItem('search_item');
+        
+        // Funcionalidad de loading
+        const form = document.querySelector('.search-form');
+        const compareBtn = document.getElementById('compareBtn');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const btnText = document.getElementById('btnText');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const searchInput = document.querySelector('.search-input');
+        
+        // Variables de control
+        let loadingStartTime = null;
+        let isLoading = false;
+        const MIN_LOADING_TIME = 800; // Mínimo 800ms para evitar parpadeo
+        
+        // Mensajes de carga aleatorios para variedad
+        const loadingMessages = [
+            {
+                title: "Buscando precios...",
+                text: "Comparando en diferentes marketplaces para encontrar las mejores ofertas"
+            },
+            {
+                title: "Analizando productos...",
+                text: "Revisando miles de productos para darte los mejores resultados"
+            },
+            {
+                title: "Comparando precios...",
+                text: "Encontrando las ofertas más convenientes para ti"
+            },
+            {
+                title: "Procesando búsqueda...",
+                text: "Esto puede tomar unos segundos, ¡vale la pena esperar!"
+            }
+        ];
+        
+        function showLoading() {
+            if (isLoading) return; // Prevenir múltiples llamadas
+            
+            isLoading = true;
+            loadingStartTime = Date.now();
+            
+            // Cambiar botón
+            compareBtn.disabled = true;
+            btnSpinner.style.display = 'block';
+            btnText.textContent = 'Buscando...';
+            
+            // Mostrar overlay con mensaje aleatorio
+            const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+            const titleElement = loadingOverlay.querySelector('.loading-title');
+            const textElement = loadingOverlay.querySelector('.loading-text');
+            
+            titleElement.textContent = randomMessage.title;
+            textElement.textContent = randomMessage.text;
+            
+            loadingOverlay.style.display = 'flex';
+            
+            // Bloquear scroll
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function hideLoading() {
+            if (!isLoading) return; // No hacer nada si no está cargando
+            
+            const elapsedTime = Date.now() - loadingStartTime;
+            const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+            
+            // Esperar el tiempo mínimo antes de ocultar
+            setTimeout(() => {
+                isLoading = false;
+                
+                // Restaurar botón
+                compareBtn.disabled = false;
+                btnSpinner.style.display = 'none';
+                btnText.textContent = 'Comparar';
+                
+                // Ocultar overlay con transición suave
+                loadingOverlay.style.display = 'none';
+                
+                // Restaurar scroll
+                document.body.style.overflow = '';
+            }, remainingTime);
+        }
+        
+        // Event listener para el formulario
+        form.addEventListener('submit', function(e) {
+            const query = searchInput.value.trim();
+            
+            // Solo mostrar loading si hay una búsqueda válida
+            if (query) {
+                showLoading();
+            }
+        });
+        
+        // Detectar si la página se está cargando con resultados
+        const hasSearchResults = {{ search_query|yesno:"true,false" }};
+        const isPageLoad = !document.referrer || document.referrer === window.location.href;
+        
+        // Solo ocultar loading si realmente había loading activo
+        window.addEventListener('DOMContentLoaded', function() {
+            // Si hay resultados y venimos de una búsqueda, ocultar loading
+            if (hasSearchResults && isLoading) {
+                hideLoading();
+            }
+        });
+        
+        // Manejar navegación del browser
+        window.addEventListener('pageshow', function(event) {
+            // Si la página viene del cache (botón atrás), resetear estado
+            if (event.persisted) {
+                isLoading = false;
+                loadingOverlay.style.display = 'none';
+                document.body.style.overflow = '';
+                compareBtn.disabled = false;
+                btnSpinner.style.display = 'none';
+                btnText.textContent = 'Comparar';
+            }
+        });
     </script>
 </body>
 </html>
