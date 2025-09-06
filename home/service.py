@@ -58,6 +58,18 @@ def process_search_mercadolibre(search_query: str, max_retries: int = 3, max_ite
     session.headers.update(headers)
     warm_up_ml_session(session)
     basic = basic_ml_scraper(formatted_query, max_items=max_items)
+    
+    # Verificar si hay error de bloqueo
+    if basic.get('error') and "BLOQUEADO" in basic.get('error'):
+        return {
+            "results": [],
+            "source": "mercadolibre",
+            "source_label": "Mercado Libre",
+            "query": search_query,
+            "url": full_url,
+            "error": basic.get('error')
+        }
+        
     results_html = basic.get('results', [])
     combined = deduplicate_items(results_html, max_items)
     return {
@@ -565,6 +577,14 @@ def basic_ml_scraper(search_slug: str, max_items: int = 5) -> dict:
 
     html = response.text or ""
     preview = html[:1000]
+    
+    # Detección de bloqueo por Mercado Libre
+    text_lower = html.lower()
+    if any(k in text_lower for k in ["captcha", "no eres un robot", "robot check", "access denied", "verifica que no eres"]):
+        error_msg = "BLOQUEADO: Mercado Libre ha detectado el scraper como bot"
+        logger.error(error_msg)
+        return {"results": [], "url": url, "preview": preview, "error": error_msg}
+        
     soup = BeautifulSoup(html, 'html.parser')
 
     anchors = _select_basic_title_anchors(soup)
@@ -663,7 +683,9 @@ def parse_mercadolibre_results(soup: BeautifulSoup, max_items: int = 20):
 
     # Detección simple de anti-bot/captcha
     page_text = soup.get_text(" ", strip=True).lower()
-    if any(keyword in page_text for keyword in ["no eres un robot", "verifica que no eres", "captcha", "robot check"]):
+    if any(keyword in page_text for keyword in ["no eres un robot", "verifica que no eres", "captcha", "robot check", "access denied"]):
+        error_msg = "BLOQUEADO: Mercado Libre ha detectado el scraper como bot"
+        logger.error(error_msg)
         return []
 
     # Selección robusta de items (prioriza layout poly dentro de li.ui-search-layout__item)
